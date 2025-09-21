@@ -1,0 +1,60 @@
+name: Sync Caltech-101 to S3
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "src/**"
+      - "data/**"
+      - ".github/workflows/s3_sync.yml"
+
+jobs:
+  run-sync:
+    # make sure these labels match your runner (Settings ▸ Actions ▸ Runners)
+    runs-on: [self-hosted, linux, x64]
+
+    env:
+      # Use secrets you added in GitHub: Settings ▸ Secrets and variables ▸ Actions
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}        # e.g. us-east-2 if your bucket is in Ohio       # set this to mlflow-276
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # If your runner doesn't already have Python 3.10+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # (Optional) Install AWS CLI v2 on the runner if not preinstalled
+      - name: Ensure AWS CLI v2
+        run: |
+          if ! command -v aws >/dev/null 2>&1; then
+            sudo apt-get update -y
+            curl -sSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
+            unzip -q awscliv2.zip
+            sudo ./aws/install
+          fi
+          aws --version
+
+      # Your project deps (if any). If you only call aws CLI you may skip this.
+      - name: Install Python deps
+        if: hashFiles('requirements.txt') != ''
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Sanity checks so we fail early with clear logs
+      - name: Verify S3 access & region
+        run: |
+          echo "Using region: ${AWS_REGION}"
+          aws s3api get-bucket-location --bucket "${S3_BUCKET}" || true
+          aws s3 ls "s3://${S3_BUCKET}" || true
+
+      # Run your script
+      - name: Run s3_setup.py
+        run: |
+          python -u src/components/s3_setup.py
