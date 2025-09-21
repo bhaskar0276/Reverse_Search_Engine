@@ -10,17 +10,17 @@ from src.exception import CustomException
 class DataStore:
     def __init__(self):
         self.root = os.path.join(os.getcwd(), "data")
-        self.zip = os.path.join(self.root, "archive.zip")
+        # self.zip = os.path.join(self.root, "archive.zip")
         self.images = os.path.join(self.root, "caltech-101")
         self.list_unwanted = ["BACKGROUND_Google"]
 
     def prepare_data(self):
         try:
-            print(" Extracting Data ")
-            with ZipFile(self.zip, 'r') as files:
-                files.extractall(path=self.root)
+            # print(" Extracting Data ")
+            # with ZipFile(self.zip, 'r') as files:
+            #     files.extractall(path=self.root)
 
-            files.close()
+            # files.close()
             print(" Process Completed ")
         except Exception as e:
             message = CustomException(e, sys)
